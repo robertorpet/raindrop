@@ -47,6 +47,8 @@ output: html_notebook
   
 -lowest priorty  
 --postmodern statistics: bayesian, PCA, structural equation models  
+--databases like SQL  
+--map stuff like GIS or similar functions  
   
   
   
