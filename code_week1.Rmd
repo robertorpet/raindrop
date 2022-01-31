@@ -1,91 +1,168 @@
 ---
-title: "R Notebook"
+title: "W1: 1st meeting & learning the arcane language"
 output: html_notebook
 ---
 
-```{r}
+*First, let us introduce ourselves and what we hope to achieve.  *
+
+**Goals of the group:**  
+  
+-learn publication-quality statistical analysis and visualization  
+-friendly and open environment to increase fellowship  
+-locally relevant  
+-accessible for beginners & experts  
+-teaching/service experience for the CV if you want to lead session(s)  
+-others?  
+  
+  
+**Components of sessions:**  
+  
+-expert-led lesson  
+-unstructured period for work and collaborative help, "how do I...?"  
+  
+  
+**Lesson topics:**  
+  
+*Week 2*  
+-best practices for excel files, data management  
+-data visualization with ggplot()  
+--mean and SEM counts on different dates by one or more factors  
+--summaries with bar charts or boxplots  
+--subsetting parts of datafiles  
+--others?  
+
+*Week 3*  
+-Basic statistics, the "dark craft"  
+--ANOVA, ANCOVA, linear model, t-test, tukey test, others?  
+
+*Future* 
+  
+-High priority  
+--visualization: creating and saving publication-quality figures with ggplot()  
+--dark arts of statistics: generalized linear models with glmmTMB()  
+  
+-Less priority  
+--github for version control, data sharing, and reproducibility  
+--if/then, while loops, and for loops  
+  
+-lowest priorty  
+--postmodern statistics: bayesian, PCA, structural equation models  
+
+
+```{r Chunk 1 - using the notebook and the console}
+#using R like a calculator
 1 + 1
 1+1
 1                         +1
-rob_variable <- 1 + 1
+
+#storing things in variables
+rob_variable <- 1 + 1 #notice use of "<-"
 rob_variable
-rob_othervariable = 2 + 2
+rob_variable <- rob_variable + 1
+rob_othervariable = 2 + 2 #you can use "=" but that's not preferred
 rob_othervariable
 print("this is rob's variable")
 rob_variable
-rob_variable = rob_othervariable
-print("this is rob's variable again")
+rob_variable == rob_othervariable # "==" is to check if it is equal
+rob_variable = rob_othervariable 
 rob_variable
-rob_variable == rob_othervariable
+
+#operators for logic. These can be useful for subsetting data
 1 > 2
 1 == 2
 1 < 2
 1 != 2
-x <- seq(0,5500, by = 5)
+# try 1 = 2 or 1 <- 2. you can't assign values to numerals, they are reserved.
+
+#multiple numbers and basic statistics summary
+#things that have "()" after them are "functions". Inside the () hit TAB to see what arguments it likes
+x <- seq(from = 0, to = 5500, by = 5) # inside functions people tend to use "=" instead of "<-", but the latter works
+x <- seq(0,5500, by = 5) # inside functions people tend to use "=" instead of "<-", but the latter works
 y <- seq(0,5500, by <- 5)
 mean(x)
-mean(c(1,2,3,4,5))
+mean(c(1,2,3,4,5)) # "c()" is for concatenate. mean(), sum(), sd(), length() are all functions that R "knows"
 sum(x)
 sd(x)
 length(x)
 SEM <- mean(x)/sqrt(length(x))
 SEM
+plot(x,y)
+
+#visualize a normal distribution
+y <- dnorm(x = x, mean = 2000, sd = 500)
+plot(x,y)
+
+#checking class
 class(1)
 class("a")
 b <- "a"
 class(b)
 class(x)
-z <- cbind(x,y)
-class(z)
-plot(x,y)
+
+#check the levels or "unique" values of a factor
 rob_listofletters <- c("a", "a", "f", "w", "a", "A", "sequins", "nileseldredge")
+class(rob_listofletters)
 unique(rob_listofletters)
-my_special_list <- unique(rob_listofletters)
+levels(rob_listofletters) #"levels" doesn't work unless the class is "factor" instead of "character"
+rob_listofletters <- as.factor(c("a", "a", "f", "w", "a", "A", "sequins", "nileseldredge"))
+unique(rob_listofletters)
+levels(rob_listofletters)
+my_special_list <- levels(rob_listofletters)
+class(my_special_list)
 ```
 
-```{r}
+```{r Chunk 2 - working with data}
+#R comes with some sample datasets you can see by typing data()
 data()
-data_iris <- iris
+data_iris <- iris #iris is one of the built-in datasets
 head(data_iris)
 names(data_iris)
 class(data_iris$Species)
 unique(data_iris$Species)
 levels(data_iris$Species)
 mean(data_iris$Sepal.Length)
-#summarize using aggregate()
-data_iris_sepal <- do.call(data.frame,
-aggregate(Sepal.Length~Species,
-data = data_iris,
-function(x)
-c(mean = mean(x),
-count = length(x),
-SEM = sd(x)/sqrt(length(x)))))
+
+#summarize using aggregate(). We are using functions within functions.
+data_iris_sepal <- do.call(data.frame, #"do.call(data.frame," is optional but helps put in good format for downstream processing
+  aggregate(Sepal.Length~Species,
+    data = data_iris,
+    function(x)
+    c(mean = mean(x),
+    count = length(x),
+    SEM = sd(x)/sqrt(length(x)))))
 data_iris_summary <- do.call(data.frame,
-aggregate(cbind(Sepal.Length,Sepal.Width)~Species,
-data = data_iris,
-function(x)
-c(mean = mean(x),
-count = length(x),
-SEM = sd(x)/sqrt(length(x)))))
+  aggregate(cbind(Sepal.Length,Sepal.Width)~Species, #we  make use of cbind() within aggregate() to summarize multiple "y"s
+    data = data_iris,
+    function(x)
+    c(mean = mean(x),
+    count = length(x),
+    SEM = sd(x)/sqrt(length(x)))))
+
 #for demo purposes I am going to add a new factor to the dataset to show how to aggregate by multiple things
-newcolumn <- rep(c(letters[1:3]),times=50)
-data_iris_new <- cbind(data_iris,newcolumn)
+newcolumn <- rep(c(letters[1:3]),times=50) #this makes a new column with a bunch of letters
+data_iris_new <- cbind(data_iris,newcolumn) #use "cbind()" to combine the columns
 data_iris_summary_new <- do.call(data.frame,
-aggregate(cbind(Sepal.Length,Sepal.Width)~Species+newcolumn,
-data = data_iris,
-function(x)
-c(mean = mean(x),
-count = length(x),
-SEM = sd(x)/sqrt(length(x)))))
-data <- read.csv("data_week1.xlsx")
+  aggregate(cbind(Sepal.Length,Sepal.Width)~Species+newcolumn, #on the right side of the "~", you can list multiple things to summarize by using "+"
+    data = data_iris,
+    function(x)
+    c(mean = mean(x),
+    count = length(x),
+    SEM = sd(x)/sqrt(length(x)))))
 ```
 
-```{r}
+```{r Chunk 3 - loading your data}
+#loading with read.csv()
+data <- read.csv("data_week1.csv") #notice the first cell has some weird characters, this the file encoding for csvs and we don't want to read it
+data <- read.csv("data_week1.csv", fileEncoding = 'UTF-8-BOM')
+
 #installing and loading packages
 library(readxl)
+
+#loading with read_excel()
 data <- read_excel("data_week1.xlsx", skip = 9,
 guess_max = 10000, #guessmax prevents columns with many initial banks being imported as a logical FALSE for not NAs)
 na = " ") # you can put a period in the quotes if that is how you code blanks.
+
 #You can load data from googledocs
 #library(googlesheets4)
 #Data_scouting <- read_sheet("put the URL here", skip = 0)
