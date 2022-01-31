@@ -47,7 +47,10 @@ output: html_notebook
   
 -lowest priorty  
 --postmodern statistics: bayesian, PCA, structural equation models  
-
+  
+  
+  
+Let us begin. This code and associated files can be found in: https://github.com/robertorpet/raindrop
 
 ```{r Chunk 1 - using the notebook and the console}
 #using R like a calculator
