@@ -1,6 +1,8 @@
 ---
-title: "W1: 1st meeting & learning the arcane language"
-output: html_notebook
+title: 'W1: 1st meeting & learning the arcane language'
+output:
+  html_document:
+    df_print: paged
 ---
 
 *First, let us introduce ourselves and what we hope to achieve.  *
@@ -12,7 +14,6 @@ output: html_notebook
 -locally relevant  
 -accessible for beginners & experts  
 -teaching/service experience for the CV if you want to lead session(s)  
--others?  
   
   
 **Components of sessions:**  
@@ -40,6 +41,7 @@ output: html_notebook
 -High priority  
 --visualization: creating and saving publication-quality figures with ggplot()  
 --dark arts of statistics: generalized linear models with glmmTMB()  
+--genomics, visualize, invite someone who can do this, transcriptomics
   
 -Less priority  
 --github for version control, data sharing, and reproducibility  
@@ -49,6 +51,7 @@ output: html_notebook
 --postmodern statistics: bayesian, PCA, structural equation models  
 --databases like SQL  
 --map stuff like GIS or similar functions  
+--specific analyses like probit for LD50, mortality/survival
   
   
   
@@ -118,8 +121,8 @@ class(my_special_list)
 
 ```{r Chunk 2 - working with data}
 #R comes with some sample datasets you can see by typing data()
-data()
 data_iris <- iris #iris is one of the built-in datasets
+str(data_iris)
 head(data_iris)
 names(data_iris)
 class(data_iris$Species)
@@ -145,7 +148,7 @@ data_iris_summary <- do.call(data.frame,
 
 #for demo purposes I am going to add a new factor to the dataset to show how to aggregate by multiple things
 newcolumn <- rep(c(letters[1:3]),times=50) #this makes a new column with a bunch of letters
-data_iris_new <- cbind(data_iris,newcolumn) #use "cbind()" to combine the columns
+data_iris_new <- cbind(data_iris,newcolumn) #use "cbind()" to add the column to the original dataset
 data_iris_summary_new <- do.call(data.frame,
   aggregate(cbind(Sepal.Length,Sepal.Width)~Species+newcolumn, #on the right side of the "~", you can list multiple things to summarize by using "+"
     data = data_iris,
@@ -155,20 +158,4 @@ data_iris_summary_new <- do.call(data.frame,
     SEM = sd(x)/sqrt(length(x)))))
 ```
 
-```{r Chunk 3 - loading your data}
-#loading with read.csv()
-data <- read.csv("data_week1.csv") #notice the first cell has some weird characters, this the file encoding for csvs and we don't want to read it
-data <- read.csv("data_week1.csv", fileEncoding = 'UTF-8-BOM')
 
-#installing and loading packages
-library(readxl)
-
-#loading with read_excel()
-data <- read_excel("data_week1.xlsx", skip = 9,
-guess_max = 10000, #guessmax prevents columns with many initial banks being imported as a logical FALSE for not NAs)
-na = " ") # you can put a period in the quotes if that is how you code blanks.
-
-#You can load data from googledocs
-#library(googlesheets4)
-#Data_scouting <- read_sheet("put the URL here", skip = 0)
-```
