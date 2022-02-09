@@ -3,45 +3,93 @@ title: "W2: data"
 output: html_notebook
 ---
 
+First: compare R script vs. notebook
+
 Goals:
 -know ways to load in data just how you want it
 -know how to diagnose and fix common problems
 -basic cleanup to prep for graph or analysis
-
+-best practices for datafiles (maybe a topic for later)
 
 Philosophy:
 -have ONE copy of your dataset. No v1, v2, _final, _finalfinal, _therealfinal, etc...
+-use R to make calculations, transformations, subsets, summaries
+-from now on I plan to share datafiles (increasingly required by journals!) and reproducible code for each published project
+-science should be reproducible and open to scrutiny
+
+```{r Chunk 1 - loading your data}
+
+#use "setwd()" if your data file is not in the same directory as your R script
+
+#LOADING with read.csv()
+data_fig4 <- read.csv("data_week2_orpetEEAfig4.csv")
+names(data_fig4) #notice the first cell has some weird characters, this the file encoding for csvs and we don't want to read it
+data_fig4 <- read.csv("data_week2_orpetEEAfig4.csv", fileEncoding = 'UTF-8-BOM')
 
 
-```{r Chunk 31 - loading your data}
-#loading with read.csv()
-data <- read.csv("data_week1.csv") #notice the first cell has some weird characters, this the file encoding for csvs and we don't want to read it
-data <- read.csv("data_week1.csv", fileEncoding = 'UTF-8-BOM')
+#INSTALLING and loading packages
+library(readxl) #if you don't have this library, go to Tools, install packages
 
-#installing and loading packages
-library(readxl)
 
-#loading with read_excel()
-data <- read_excel("data_week1.xlsx", skip = 9,
-guess_max = 10000, #guessmax prevents columns with many initial banks being imported as a logical FALSE for not NAs)
-na = " ") # you can put a period in the quotes if that is how you code blanks.
+#LOADING with read_excel()
+#simple way
+data_fig4 <- read_excel("data_week2_orpetEEAfig4.xlsx")
+#useful options
+data_fig4 <- read_excel("data_week2_orpetEEAfig4.xlsx",
+                   skip = 0, #skip rows if your dataset starts lower
+                   guess_max = 10000, #prevents columns with many initial blanks importing as logical FALSE)
+                   na = " ") # you can put a period in the quotes if that is how you code blanks.
 
-#You can load data from googledocs
+#GOOGLEDOCS
 #library(googlesheets4)
 #Data_scouting <- read_sheet("put the URL here", skip = 0)
+
 ```
 
 
-library(readxl)
-library(ggplot2)
-Data <- read_excel("Fig 4.xlsx")
-Data$Weeks <- as.character(Data$Weeks)
-Data$Experimentlabel <- factor(Data$Experiment, labels=c(
+```{r Chunk 2 - data cleanup and prep}
+
+#(example) change weeks from a number to a character
+data_fig4$Weeks <- as.character(data_fig4$Weeks)
+
+#(example) re-order and change treatment names from alphabetical to order I will want on my figure legend
+data_fig4$Elicitor <- factor(data_fig4$Elicitor,
+                         levels=c("Harpin", "ASM"),       #I change the order of the levels (not the order of the data though)
+                         labels=c("Harpin", "Actigard"))  #I change the name of ASM to Actigard
+
+#(example) add a new column for a calculation (this is example is nonsense, but just to show you)
+#philosophy: don't do calculation in excel! Keep your datafiles raw an unmanipulated
+#adding two columns together
+data_fig4$bogus_sum <- data_fig4$Foldchange + data_fig4$ddCT
+#do a transformation
+data_fig4$bogus_sqrt <- sqrt(data_fig4$bogus_sum + 100)
+data_fig4$ddCT_negative <- -(data_fig4$ddCT) #I originally did this in excel, resulting in 0 instead of blank for one row
+
+#(advanced) making a new column with "labels" for treatment I will want to use later in figure
+#will explain "expression(paste())" later. The purpose is you can have a label with formatting like bold, superscripts etc...
+data_fig4$Experimentlabel <- factor(data_fig4$Experiment, labels=c(
                "A"=expression(paste("27 April field spray")),
                "B"=expression(paste("23 May field spray")),
                "C"=expression(paste("Potted tree spray "))))
 
-ggplot(data = Data, aes(x = Weeks, y = minusddCT)) +
+#subsetting
+data_fig4_expA <- subset(data_fig4, Experiment == "A")
+data_fig4_bogussubset <- subset(data_fig4, ddCT > 0 & Elicitor == "Actigard") #subset multiple conditions
+data_fig4_bogussubset <- subset(data_fig4, Experiment == "A" | Experiment == "B") # use "|" for "or"
+
+
+```
+
+```{r Chunk 3 - a graph}
+
+#makes use of:
+##legend is in the order we asked for
+##the labels we made earlier for panels
+##could have but not really - weeks treated as a categroy instead of a continuous number, transformation to -ddCT
+
+library(ggplot2)
+
+ggplot(data = data_fig4, aes(x = Weeks, y = minusddCT)) +
   #geom_errorbar(aes(ymin = Foldchange-SEM, ymax = Foldchange+SEM, group = Elicitor), width = 0, position=position_dodge(width=0.9)) +
   #geom_point(stat = "identity", shape = 21, color = 'black', aes(fill = Elicitor), position=position_dodge(width=0.5)) +
   geom_hline(yintercept = 0, linetype = 'dashed', size = 0.25) +
@@ -50,9 +98,9 @@ ggplot(data = Data, aes(x = Weeks, y = minusddCT)) +
   geom_point(shape = 23, size = 2, stat = "summary", fun = "mean", color = 'black', aes(fill = Elicitor), position=position_dodge(width=0.6)) +
   facet_wrap(~Experimentlabel, ncol = 1, scales = 'free',labeller = label_parsed) +
   scale_fill_manual(values=c('black', 'grey')) +
-  geom_blank(data = subset(Data, Experiment  == "A"), aes(y = 3)) +
-  geom_blank(data = subset(Data, Experiment  == "B"), aes(y = 4, x = '1')) +
-  geom_blank(data = subset(Data, Experiment  == "C"), aes(x = '7')) +
+  geom_blank(data = subset(data_fig4, Experiment  == "A"), aes(y = 3)) +
+  geom_blank(data = subset(data_fig4, Experiment  == "B"), aes(y = 4, x = '1')) +
+  geom_blank(data = subset(data_fig4, Experiment  == "C"), aes(x = '7')) +
   scale_y_continuous(expression(paste("Relative ",italic("PR-1 "), "expression (-",paste(Delta),paste(Delta),"C"[T],")"))) +
   scale_x_discrete("\nWeeks post-treatment",breaks = c("0 (pre-spray)","1","3","7")) +
   theme_classic() +
@@ -78,3 +126,13 @@ ggplot(data = Data, aes(x = Weeks, y = minusddCT)) +
         )
 
 ggsave("Figure_4.tiff", width = 8, height = 12, units = "cm", dpi = 400, bg = "transparent")
+
+
+```
+
+best practices for datafiles (maybe a topic for later)
+--avoid multiple tabs in an excel file
+
+
+
+
