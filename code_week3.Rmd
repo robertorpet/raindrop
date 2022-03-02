@@ -3,9 +3,8 @@ title: "W3"
 output: html_notebook
 ---
 
-Iterating on graphs with the iris dataset
-
 ggplot2 website: https://ggplot2.tidyverse.org/
+https://www.maths.usyd.edu.au/u/UG/SM/STAT3022/r/current/Misc/data-visualization-2.1.pdf
 "grammar of graphics" book
 
 
@@ -32,6 +31,8 @@ data_wk3 <- read_excel("data_week2_orpetEEAfig4.xlsx",
 
 #load data, but we didn't tell it what kind of graphics we want
 ggplot(data = data_wk3, aes(x = Elicitor, y = minusddCT))
+ggplot(data_wk3, aes(Elicitor, minusddCT))
+
 
 #adding points
 ggplot(data = data_wk3, aes(x = Elicitor, y = minusddCT)) + geom_point()
@@ -79,7 +80,7 @@ ggplot(data = data_wk3, aes(x = Elicitor, y = minusddCT)) +
 ```{r GEOMETRIES}
 
 #Boxplot
-ggplot(data = data_wk3, aes(x = Elicitor, y = minusddCT)) +
+plot_a <- ggplot(data = data_wk3, aes(x = Elicitor, y = minusddCT)) +
   geom_boxplot() +
   scale_y_continuous("-ddCT", limits = c(-11,11))
 
@@ -87,7 +88,7 @@ ggplot(data = data_wk3, aes(x = Elicitor, y = minusddCT)) +
 ggplot(data = data_wk3, aes(x = Elicitor, y = minusddCT)) +
   geom_boxplot() +
   geom_errorbar(stat = "summary", fun.data = mean_se, width=0) +
-  geom_point(shape = 23, size = 2, stat = "summary", fun = "mean", fill = 'black') +
+  geom_point(shape = 23, size = 4, stat = "summary", fun = "mean", fill = 'red', alpha = 0.5) +
   scale_y_continuous("-ddCT", limits = c(-11,11))
 
 #Line (nonsense example)
@@ -138,7 +139,40 @@ practiceplot <- ggplot(data = data_wk3, aes(x = Weeks, y = minusddCT, color = El
   scale_y_continuous("-ddCT", limits = c(-11,11))
 
 ggsave(plot = practiceplot, "practicefigure.tiff", width = 8, height = 12, units = "cm", dpi = 400, bg = "transparent")
-ggsave(plot = practiceplot, "practicefigure2.tiff", width = 8, height = 6, units = "cm", dpi = 400, bg = "transparent")
+ggsave(plot = practiceplot, "practicefigure2.pdf", width = 8, height = 6, units = "cm", dpi = 400, bg = "transparent")
+
+```
+
+```{r ggarrange()}
+
+#you might want a multi-panel figure that combines very different data and faceting is not a good way.
+library(ggpubr)
+
+
+plot_a <- ggplot() + geom_point(aes(x = c(5,6,7), y = c(4,5,6)))
+plot_b <- ggplot() + geom_point(aes(x = c("queen","salamander","mystery"), y = c(8,4000,-2000)))
+
+plot_ab <- ggarrange(
+    plot_a,
+    plot_b,
+    ncol = 1,
+    labels = "AUTO"
+    )
+
+plot_ab <- ggarrange(
+    plot_a,
+    plot_b,
+    ncol = 1,
+    labels = "AUTO",
+    align="hv", #make the plots aligned horizontally (h) and vertically (v)
+    common.legend = TRUE #has no effect here, but would cause there to be one legend instead of one per panel
+)
+
+megafigure <- ggarrange(
+  plot_ab,
+  plot_a,
+  labels = c(" ","C") #doing the labels manually
+)
 
 ```
 

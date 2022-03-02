@@ -1,6 +1,8 @@
 ---
-title: "W2: data"
-output: html_notebook
+title: 'W2: data'
+output:
+  html_document:
+    df_print: paged
 ---
 
 First: compare R script vs. notebook
@@ -39,6 +41,7 @@ data_fig4 <- read_excel("data_week2_orpetEEAfig4.xlsx",
                    skip = 0, #skip rows if your dataset starts lower
                    guess_max = 10000, #prevents columns with many initial blanks importing as logical FALSE)
                    na = " ") # you can put a period in the quotes if that is how you code blanks.
+#to load from a different sheet, use sheet = 
 
 #GOOGLEDOCS
 #library(googlesheets4)
