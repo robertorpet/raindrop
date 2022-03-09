@@ -159,7 +159,7 @@ summary(model_anova4)
 
 
 #what if points are not statistically independent? (blocks)
-ggplot(data_blocks, aes(x=xb1,y=yb1,color=block)) + geom_point
+ggplot(data_blocks, aes(x=xb1,y=yb1,color=block)) + geom_point()
 
 model_anova5 <- aov(yb1 ~ xb1, data = data_blocks)
 summary(model_anova5) #not significant because you ignored paired data
