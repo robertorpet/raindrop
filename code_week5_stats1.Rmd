@@ -1,0 +1,209 @@
+---
+title: "W4"
+output: html_notebook
+---
+
+Outline:
+1. The dark art and the black box 
+2. Generating data of known properties
+3. anova and linear model - power
+4. diagnostic plots w/ simple examples
+   --non-equal in variances
+   --non-normal
+   --blocks
+5. multiple comparisons
+
+```{r The Black Box}
+
+library(ggplot2)
+
+x <-c(1,2,3,4)
+y <- c(1,1,1,1)
+text <- c("DESIGN\nunit of replication\nblocks\nscope of inference\nx and y variables",
+          "DATA\n\n\n\n",
+          "BLACK BOX\n\napplied statistics\n\nmagic",
+          "RESULTS\n\nP values\n\nnovel findings")
+data <- cbind(x,y,text)
+data <- as.data.frame(data)
+
+ggplot(data, aes(x = x, y = y, label = text)) +
+  geom_text() +
+  annotate("rect", xmin=c(2.6), xmax=c(3.4), ymin=c(0.8) , ymax=c(1.2), alpha=0.5, color="black", fill="black") +
+  annotate("rect", xmin=c(0.6,1.6,3.6), xmax=c(1.4,2.4,4.4), ymin=c(0.8,0.8,0.8) , ymax=c(1.2,1.2,1.2), alpha=0, color="black", fill="black") +
+  annotate("segment", x = 0.6, xend = 4.4, y = 1.3, yend = 1.3,
+           colour = "blue", size = 2, arrow = arrow()) +
+  ggtitle("There are lies, damned lies, and statistics") +
+  theme_void() +
+  theme(plot.background = element_rect(fill = "grey95", colour = NA))
+
+
+```
+
+
+
+```{r generating numbers}
+
+#load packages
+library(readxl)
+
+#let's generate some fake data with defined patterns
+#we are getting numbers from a normal distribution and a negative binomial distribution
+y1 <- rnorm(n = 30, mean = 10, sd = 6)
+y2 <- rnorm(n = 30, mean = 14, sd = 6)
+y3 <- rnorm(n = 30, mean = 14, sd = 18)
+y5 <- rnbinom(n = 30, mu = 10, size = 1) #mu = mean; bigger "size" = smaller sd
+y6 <- rnbinom(n = 30, mu = 14, size = 1) #mu = mean; bigger "size" = smaller sd
+y7 <- rnorm(n = 4, mean = 10, sd = 6)
+y8 <- rnorm(n = 4, mean = 14, sd = 6)
+y9 <- rnorm(n = 4, mean = 14, sd = 18)
+
+#make some x values for treatment labels
+x1 <- rep("norm10", times = 30)
+x2 <- rep("norm14", times = 30)
+x3 <- rep("norm14bigSD", times = 30)
+x5 <- rep("nbinom10", times = 30)
+x6 <- rep("nbinom14", times = 30)
+x7 <- rep("norm10_4n", times = 4)
+x8 <- rep("norm14_4n", times = 4)
+x9 <- rep("norm14_4n_bigSD", times = 4)
+
+#example with blocks
+block <- c('a','a','b','b','c','c','d','d')
+xb1 <- c('trt1','trt2','trt1','trt2','trt1','trt2','trt1','trt2')
+yb1 <- c(60,70,50,56,30,38,25,30)
+data_blocks <- data.frame(block,xb1,yb1)
+
+#example with blocks & multiple comparisons
+block <- c('a','a','b','b','c','c','d','d','a','b','c','d')
+xb1 <- c('t1','t2','t1','t2','t1','t2','t1','t2','t3','t3','t3','t3')
+yb1 <- c(60,70,50,56,30,38,25,30, 65,44,36,19)
+data_blocks2 <- data.frame(block,xb1,yb1)
+
+#construct data frames
+response <- c(y1,y2)
+explanatory <- c(x1,x2)
+data_n30 <- data.frame(explanatory,response)
+
+response <- c(y7,y8)
+explanatory <- c(x7,x8)
+data_n4 <- data.frame(explanatory,response)
+
+response <- c(y1,y3)
+explanatory <- c(x1,x3)
+data_n30diffvar <- data.frame(explanatory,response)
+
+response <- c(y5,y6)
+explanatory <- c(x5,x6)
+data_nbinom <- data.frame(explanatory,response)
+
+
+```
+
+```{r ANOVA, linear model, & power}
+
+#should we do ANOVA?
+#what are the assumptions? first, graph your data
+ggplot(data_n30, aes(x = explanatory, y = response)) + geom_point()
+ggplot(data_n30, aes(y = response, fill = explanatory)) + geom_histogram(color = "black", binwidth=2) + facet_wrap(~explanatory)
+
+#make models
+#aov (analysis of variance) and lm (linear model) are the same for our purpose
+model_anova1 <- aov(response ~ explanatory, data = data_n30)
+model_lm1 <- lm(response ~ explanatory, data = data_n30) #the intercept here = mean of explanatorynorm10, intercept + explanatorynorm14 = mean of the latter
+mean(y1)
+mean(y2)
+
+#get statistics tests from models
+summary(model_anova1)
+summary(model_lm1)
+
+#less n = less power (greater type I error)
+ggplot(data_n4, aes(x = explanatory, y = response)) +
+  geom_point() +
+  scale_y_continuous(limits = c(0,NA))
+
+model_anova2 <- aov(response ~ explanatory, data = data_n4)
+summary(model_anova2)
+
+```
+
+```{r CHUNK 3 assumptions}
+
+#what are the assumptions of ANOVA?
+#  1. 
+#  2. 
+# (3. 
+
+
+#what it should look like
+plot(model_anova1, 1) #check variances w/ residuals vs fitted
+plot(model_anova1, 2) #check normality w/ qqplot (quantile-quantile)
+#y axis is your data's residuals in ascending order
+#x axis is where they should fall on a normal distribution
+
+
+#what is looks like if variances are different
+ggplot(data_n30diffvar, aes(x = explanatory, y = response)) + geom_point()
+model_anova3 <- lm(response ~ explanatory, data = data_n30diffvar)
+plot(model_anova3, 1) #one group has bigger spread
+plot(model_anova3, 2) #still normal though
+summary(model_anova3) 
+
+
+#what is it like if data are not normally distributed?
+ggplot(data_nbinom, aes(x = explanatory, y = response)) + geom_point()
+model_anova4 <- lm(response ~ explanatory, data = data_nbinom)
+plot(model_anova4, 1) #residuals not even around means
+plot(model_anova4, 2) #large values not close to line
+summary(model_anova4)
+
+
+#what if points are not statistically independent? (blocks)
+ggplot(data_blocks, aes(x=xb1,y=yb1,color=block)) + geom_point
+
+model_anova5 <- aov(yb1 ~ xb1, data = data_blocks)
+summary(model_anova5) #not significant because you ignored paired data
+
+model_anova6 <- aov(yb1 ~ xb1 + block, data = data_blocks)
+summary(model_anova6) #highly significant when blocks are in there
+
+
+#what if points are not statistically independent? (pseudoreplication)
+
+#e.g., you measured each plant 30 times
+#summarize (e.g., take mean) for each experimental unit (plant)
+#or, we could add random effects, similar to blocking
+
+
+```
+
+```{r multiple comparisons}
+
+#first visualize data
+ggplot(data_blocks2, aes(x=xb1,y=yb1,color=block)) + geom_point()
+
+#construct model
+model_anova7 <- aov(yb1 ~ xb1 + block, data = data_blocks2)
+model_lm7 <- lm(yb1 ~ xb1 + block, data = data_blocks2)
+summary(model_anova7) #congratulations, P < 0.05
+summary(model_lm7) #we can look at coefficients with lm
+
+
+#R has a built-in TukeyHSD test
+TukeyHSD(model_anova7)
+
+#emmeans package is another way for multiple comparisons
+library(emmeans)
+#tukey
+print(emmeans(model_anova7, list(pairwise ~ xb1), adjust = "tukey"))
+#Fisher's LSD
+print(emmeans(model_anova7, list(pairwise ~ xb1), adjust = "none"))
+#Dunnet's test to control
+print(emmeans(model_anova7, trt.vs.ctrl ~ xb1))
+
+
+
+```
+
+
+

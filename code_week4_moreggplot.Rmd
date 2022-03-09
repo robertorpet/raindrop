@@ -1,0 +1,254 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This week has more resources for making ggplots look the way you want.
+-free y axis for on facet plots
+-change facet label appearance
+-manually select colors (note there is color, and fill. same approach can be used for size, linetype, shape)
+-annoating with geom_text()
+-super special axis labels with italics, superscripts, symbols, or whatever
+
+
+```{r SETUP}
+
+#load libraries
+library(ggplot2)
+library(readxl)
+
+#load data
+data_wk3 <- read_excel("data_week2_orpetEEAfig4.xlsx")
+
+#load theme
+theme_raindrop <- theme_set(theme_bw())
+theme_raindrop <- theme_update(
+  plot.background = element_blank(),
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank()
+  )
+
+```
+
+
+```{r ADVANCED APPEARANCE - free y axis on facets, facet label appearance, manual color selection}
+
+#free y axis
+ggplot(data = data_wk3, aes(x = Weeks, y = minusddCT, color = Elicitor)) +
+  geom_point(shape = 23, position=position_dodge(width=0.6)) +
+  geom_errorbar(stat = "summary", fun.data = mean_se, width=0, position=position_dodge(width=0.6)) +
+  geom_point(shape = 23, size = 2, stat = "summary", fun = "mean", color = "black", aes(fill = Elicitor), position=position_dodge(width=0.6)) +
+  facet_grid(Experiment ~ ., scales = "free_y") +
+  scale_y_continuous("-ddCT")
+
+#lets change where the experiment labels are and the names of them
+#now instead of facet_grid() we use facet_wrap() (useful only for one faceting by one variable) because it has the ncol option and I want one column
+data_wk3 <- read_excel("data_week2_orpetEEAfig4.xlsx")
+data_wk3$Experiment <- factor(data_wk3$Experiment,
+                         levels=c("A", "B","C"),       
+                         labels=c("Exp1", "Exp2","Exp3"))
+ggplot(data = data_wk3, aes(x = Weeks, y = minusddCT, color = Elicitor)) +
+  geom_point(shape = 23, position=position_dodge(width=0.6)) +
+  geom_errorbar(stat = "summary", fun.data = mean_se, width=0, position=position_dodge(width=0.6)) +
+  geom_point(shape = 23, size = 2, stat = "summary", fun = "mean", color = "black", aes(fill = Elicitor), position=position_dodge(width=0.6)) +
+  facet_wrap(~ Experiment, scales = "free_y",ncol=1) +
+  scale_y_continuous("-ddCT")
+
+#remove the grey box for facet labels, move legend to upper right
+ggplot(data = data_wk3, aes(x = Weeks, y = minusddCT, color = Elicitor)) +
+  geom_point(shape = 23, position=position_dodge(width=0.6)) +
+  geom_errorbar(stat = "summary", fun.data = mean_se, width=0, position=position_dodge(width=0.6)) +
+  geom_point(shape = 23, size = 2, stat = "summary", fun = "mean", color = "black", aes(fill = Elicitor), position=position_dodge(width=0.6)) +
+  facet_wrap(~ Experiment, scales = "free_y",ncol=1) +
+  scale_y_continuous("-ddCT") +
+  theme(strip.background = element_blank(), #removes grey box facet labels
+        legend.position=c(1,1), legend.justification=c(1,0), #moves legend to upper right
+        legend.margin=margin(), legend.key.size = unit(0.75, 'lines')) #helps prevent being cut off
+
+#manually select colors
+ggplot(data = data_wk3, aes(x = Weeks, y = minusddCT, color = Elicitor)) +
+  scale_color_manual(values=c("grey","black")) +
+  scale_fill_manual(values=c("grey","black")) +
+  geom_point(shape = 23, position=position_dodge(width=0.6)) +
+  geom_errorbar(stat = "summary", fun.data = mean_se, width=0, position=position_dodge(width=0.6)) +
+  geom_point(shape = 23, size = 2, stat = "summary", fun = "mean", color = "black", aes(fill = Elicitor), position=position_dodge(width=0.6)) +
+  facet_wrap(~ Experiment, scales = "free_y",ncol=1) +
+  scale_y_continuous("-ddCT") +
+  theme(strip.background = element_blank(), #removes grey box facet labels
+        legend.position=c(1,1), legend.justification=c(1,0), #moves legend to upper right
+        legend.margin=margin(), legend.key.size = unit(0.75, 'lines')) #helps prevent being cut off
+
+```
+
+
+```{r ANNOTATION}
+
+#re-load data
+data_wk3 <- read_excel("data_week2_orpetEEAfig4.xlsx")
+
+#manually put a letter on with geom_text(). The X axis is a category but categories are numbered, so you can use coordinates
+ggplot(data = data_wk3, aes(x = Weeks, y = minusddCT, color = Elicitor)) +
+  scale_color_manual(values=c("grey","black")) +
+  scale_fill_manual(values=c("grey","black")) +
+  geom_point(shape = 23, position=position_dodge(width=0.6)) +
+  geom_errorbar(stat = "summary", fun.data = mean_se, width=0, position=position_dodge(width=0.6)) +
+  geom_point(shape = 23, size = 2, stat = "summary", fun = "mean", color = "black", aes(fill = Elicitor), position=position_dodge(width=0.6)) +
+  facet_wrap(~ Experiment, scales = "free_y",ncol=1) +
+  scale_y_continuous("-ddCT") +
+  #-------------------------------#######################
+  geom_text(                      #                     #
+           x = 0.85,              #                     #
+           y = 1,                 #     geom_text()     #
+           label = "a",           #                     #
+           size=4,                #                     #
+           ) +                    #                     #
+  #-------------------------------#######################
+  theme(strip.background = element_blank(), #removes grey box facet labels
+        legend.position=c(1,1), legend.justification=c(1,0), #moves legend to upper right
+        legend.margin=margin(), legend.key.size = unit(0.75, 'lines')) #helps prevent being cut off
+
+
+#Solutions:
+#Get your letter on just one of the facets by subsetting data
+#remove letter from overplotting the legend and overplotting on each other for each row of data with options
+#make sure the letter is black
+ggplot(data = data_wk3, aes(x = Weeks, y = minusddCT, color = Elicitor)) +
+  scale_color_manual(values=c("grey","black")) +
+  scale_fill_manual(values=c("grey","black")) +
+  geom_point(shape = 23, position=position_dodge(width=0.6)) +
+  geom_errorbar(stat = "summary", fun.data = mean_se, width=0, position=position_dodge(width=0.6)) +
+  geom_point(shape = 23, size = 2, stat = "summary", fun = "mean", color = "black", aes(fill = Elicitor), position=position_dodge(width=0.6)) +
+  facet_wrap(~ Experiment, scales = "free_y",ncol=1) +
+  scale_y_continuous("-ddCT") +
+  ####################################################################################
+  geom_text(data = subset(data_wk3, Experiment == "A"),
+           x = 0.85,
+           y = 1,
+           label = "a",
+           show.legend = FALSE,
+           check_overlap = TRUE,
+           color = "black") +
+  ###################################################################################
+  theme(strip.background = element_blank(), #removes grey box facet labels
+        legend.position=c(1,1), legend.justification=c(1,0), #moves legend to upper right
+        legend.margin=margin(), legend.key.size = unit(0.75, 'lines')) #helps prevent being cut off
+
+
+
+
+#Is there an easier way?
+#I thought you could give x, y, and label a list of things with c(), but I can't get it to work
+
+
+
+```
+
+
+```{r SUPER SPECIAL AXIS LABELS}
+
+#expression() is what allows for italics and symbols codes        
+#paste() is a way to glue things together, separated by commas
+
+#explaination of expression() and paste()
+raindropexpression <- expression(italic("raindrop")) #ggplot would print this out as the word "raindrop" with italics
+a <- "This is a secret sentence."
+paste("A secret sentence is coming up. ", a, " Now you know the secret")
+
+#I formatted this weirdly to help you see what is going on:
+raindroplabel <- expression(paste(
+  "Relative "         ,
+  italic("PR-1 ")     , 
+  "expression (-"     ,
+  Delta               , #expression() "knows" Delta means the triangle symbol
+  Delta               , 
+  "C"[T]              , #the brackets make things subscripted
+  ")"
+  ))
+
+ggplot(data = data_wk3, aes(x = Weeks, y = minusddCT, color = Elicitor)) +
+  scale_color_manual(values=c("grey","black")) +
+  scale_fill_manual(values=c("grey","black")) +
+  geom_point(shape = 23, position=position_dodge(width=0.6)) +
+  geom_errorbar(stat = "summary", fun.data = mean_se, width=0, position=position_dodge(width=0.6)) +
+  geom_point(shape = 23, size = 2, stat = "summary", fun = "mean", color = "black", aes(fill = Elicitor), position=position_dodge(width=0.6)) +
+  facet_wrap(~ Experiment, scales = "free_y",ncol=1) +
+  scale_y_continuous(raindroplabel) +
+  theme(strip.background = element_blank(), #removes grey box facet labels
+        legend.position=c(1,1), legend.justification=c(1,0), #moves legend to upper right
+        legend.margin=margin(), legend.key.size = unit(0.75, 'lines') #helps prevent being cut off
+       )
+
+ggplot(data = data_wk3, aes(x = Weeks, y = minusddCT, color = Elicitor)) +
+  scale_color_manual(values=c("grey","black")) +
+  scale_fill_manual(values=c("grey","black")) +
+  geom_point(shape = 23, position=position_dodge(width=0.6)) +
+  geom_errorbar(stat = "summary", fun.data = mean_se, width=0, position=position_dodge(width=0.6)) +
+  geom_point(shape = 23, size = 2, stat = "summary", fun = "mean", color = "black", aes(fill = Elicitor), position=position_dodge(width=0.6)) +
+  facet_wrap(~ Experiment, scales = "free_y",ncol=1) +
+  scale_y_continuous(raindroplabel) +
+  theme(strip.background = element_blank(), #removes grey box facet labels
+        legend.position=c(1,1), legend.justification=c(1,0), #moves legend to upper right
+        legend.margin=margin(), legend.key.size = unit(0.75, 'lines') #helps prevent being cut off
+       )
+
+
+
+```
+
+
+```{r LINE CHART EXAMPLE}
+
+#problem: it connects data within x category instead of a line between them
+ggplot(data = data_wk3, aes(x = Weeks, y = minusddCT)) +
+  geom_point() +
+  geom_line()
+
+#solution pt1: summarize to one value per x category
+#still problem: the x variable is a "character" and ggplot doesn't "know" that lines should connect them
+ggplot(data = data_wk3, aes(x = Weeks, y = minusddCT)) +
+  geom_point() +
+  geom_line(stat = "summary", fun = "mean", color = "red", aes())
+
+#solution pt2: add group = 1 to aes(). This tells ggplot you want it to connect *everything*
+ggplot(data = data_wk3, aes(x = Weeks, y = minusddCT)) +
+  geom_point() +
+  geom_line(stat = "summary", fun = "mean", color = "red", aes(group = 1))
+
+#solution pt2: you can use a different "group" like treatment ("Elicitor" for this experiment).
+#we can also add the treatment to the aes() on the first line as color = to get colors to match treatments
+ggplot(data = data_wk3, aes(x = Weeks, y = minusddCT, color = Elicitor)) +
+  geom_point() +
+  geom_line(stat = "summary", fun = "mean", aes(group = Elicitor))
+
+
+
+
+
+
+
+#the above example is an annoying thing that is normally not a problem
+#If you have numbers or dates instead of characters, lines will work fine
+#re-load data
+data_wk3 <- read_excel("data_week2_orpetEEAfig4.xlsx",
+                   skip = 0, #skip rows if your dataset starts lower
+                   guess_max = 10000, #prevents columns with many initial blanks importing as logical FALSE)
+                   na = " ") # you can put a period in the quotes if that is how you code blanks.
+#use replace() to change that the level with letters to just a number 0
+data_wk3$Weeks <- replace(data_wk3$Weeks, data_wk3$Weeks == "0 (pre-spray)" , 0)
+#convert to numeric
+data_wk3$Weeks <- as.numeric(data_wk3$Weeks)
+
+#Now lines work like you expect for a time series
+#still problem: the x variable is a "character" and ggplot doesn't "know" that lines should connect them
+ggplot(data = data_wk3, aes(x = Weeks, y = minusddCT)) +
+  geom_point() +
+  geom_line(stat = "summary", fun = "mean", color = "red")
+
+ggplot(data = data_wk3, aes(x = Weeks, y = minusddCT, color = Elicitor)) +
+  geom_point() +
+  geom_line(stat = "summary", fun = "mean")
+  
+
+
+```
+
