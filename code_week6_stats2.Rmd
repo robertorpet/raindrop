@@ -15,6 +15,7 @@ https://www.flutterbys.com.au/stats/tut/tut10.4.html
 
 ```{r generate numbers}
 
+
 #load packages
 library(readxl)
 library(ggplot2)
