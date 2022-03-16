@@ -1,0 +1,271 @@
+---
+title: "W4"
+output: html_notebook
+---
+
+Mixed models.--
+generalized: non-normal distributions
+mixed: fixed vs. random effects. Two uses of random effects: (1) blocks and (2) preventing pseudoreplication
+
+FAQ:
+https://bbolker.github.io/mixedmodels-misc/glmmFAQ.html
+
+Examples of specifying models:
+https://www.flutterbys.com.au/stats/tut/tut10.4.html
+
+```{r generate numbers}
+
+#load packages
+library(readxl)
+library(ggplot2)
+
+#set graph appearance
+theme_raindrop <- theme_set(theme_bw())
+theme_raindrop <- theme_update(
+  plot.background = element_blank(),
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank())
+
+#let's generate some fake data with defined patterns
+#we are getting numbers from a normal distribution and a negative binomial distribution
+y1 <- rnorm(n = 30, mean = 10, sd = 6)
+y2 <- rnorm(n = 30, mean = 14, sd = 6)
+y3 <- rnorm(n = 30, mean = 14, sd = 18)
+y5 <- rnbinom(n = 30, mu = 10, size = 1) #mu = mean; bigger "size" = smaller sd
+y6 <- rnbinom(n = 30, mu = 14, size = 1) #mu = mean; bigger "size" = smaller sd
+y7 <- rnorm(n = 4, mean = 10, sd = 6)
+y8 <- rnorm(n = 4, mean = 14, sd = 6)
+y9 <- rnorm(n = 4, mean = 14, sd = 18)
+
+#make some x values for treatment labels
+x1 <- rep("norm10", times = 30)
+x2 <- rep("norm14", times = 30)
+x3 <- rep("norm14bigSD", times = 30)
+x5 <- rep("nbinom10", times = 30)
+x6 <- rep("nbinom14", times = 30)
+x7 <- rep("norm10_4n", times = 4)
+x8 <- rep("norm14_4n", times = 4)
+x9 <- rep("norm14_4n_bigSD", times = 4)
+
+#example with blocks
+block <- c('a','a','b','b','c','c','d','d')
+xb1 <- c('trt1','trt2','trt1','trt2','trt1','trt2','trt1','trt2')
+yb1 <- c(60,70,50,56,30,38,25,30)
+data_blocks <- data.frame(block,xb1,yb1)
+
+#example with blocks & multiple comparisons
+block <- c('a','a','b','b','c','c','d','d','a','b','c','d')
+xb1 <- c('t1','t2','t1','t2','t1','t2','t1','t2','t3','t3','t3','t3')
+yb1 <- c(60,70,50,56,30,38,25,30, 65,44,36,19)
+data_blocks2 <- data.frame(block,xb1,yb1)
+
+#construct data frames
+response <- c(y1,y2)
+explanatory <- c(x1,x2)
+data_n30 <- data.frame(explanatory,response)
+
+response <- c(y7,y8)
+explanatory <- c(x7,x8)
+data_n4 <- data.frame(explanatory,response)
+
+response <- c(y1,y3)
+explanatory <- c(x1,x3)
+data_n30diffvar <- data.frame(explanatory,response)
+
+response <- c(y5,y6)
+explanatory <- c(x5,x6)
+data_nbinom <- data.frame(explanatory,response)
+
+```
+
+
+
+
+generalized: non-normal distributions
+
+```{r}
+#--------------------------------------------------------------------#
+#what is it like if data are not normally distributed? (normal ANOVA)
+#--------------------------------------------------------------------#
+#these data follow a negative binomial distribution (common for insect counts)
+ggplot(data_nbinom, aes(x = explanatory, y = response)) + geom_point()
+model_anova4 <- lm(response ~ explanatory, data = data_nbinom)
+plot(model_anova4, 1) #residuals not even around means
+plot(model_anova4, 2) #large values not close to line
+summary(model_anova4)
+
+#--------------------------------------------------------------------#
+#what is it like if data are not normally distributed? (glmmTMB)
+#--------------------------------------------------------------------#
+#LOAD PACKAGES
+library(readxl)
+library(car) #for Anova
+library(glmmTMB) #for generalized linear models
+library(DHARMa) #for model diagnostics
+library(emmeans) #for tukey tests
+
+#glmmTMB
+#equivalent to previous ANOVA
+model <- glmmTMB(formula = response ~ explanatory, data = data_nbinom)
+
+#we need special functions (from DHARMa package) to check assumptions
+#left plot: you want a straight line
+#right plot: you want the groups to not be different (black box)
+plot(simulateResiduals(model))
+
+
+#fit using a negative binomial distribution (there are two paramaterizations available)
+model <- glmmTMB(formula = response ~ explanatory, data = data_nbinom, family = "nbinom1")
+plot(simulateResiduals(model))
+
+model <- glmmTMB(formula = response ~ explanatory, data = data_nbinom, family = "nbinom2")
+plot(simulateResiduals(model))
+
+
+#getting P values
+Anova(model)
+
+#the language I use for publication: Significance of each fixed effect was assessed with a type II Wald’s χ2 test (Bolker et al., 2009) using the ‘Anova’ function of the ‘car’ package.
+
+#Bolker BM, Brooks ME, Clark CJ, Geange SW, Poulsen JR et al. (2009) Generalized linear mixed models: a practical guide for ecology and evolution. Trends in Ecology and Evolution 24: 127–135. 
+
+
+#TRANSFORMATIONS:
+#this is equivalent to "lognormal" distribution (I think)
+model <- glmmTMB(formula = log(response+1) ~ explanatory, data = data_nbinom, family = gaussian) #why response + 1 ?
+plot(simulateResiduals(model))
+
+
+
+#OTHER USEFUL DISTRIBUTIONS
+
+#binomial for binary data (coded as 0 or 1)
+#glmmTMB(y ~ x, data = dat, family = "binomial")
+
+```
+
+
+
+mixed: fixed vs. random effects
+
+```{r}
+#what if points are not statistically independent? (blocks example)
+ggplot(data_blocks, aes(x=xb1,y=yb1,color=block)) + geom_point()
+model_anova5 <- aov(yb1 ~ xb1, data = data_blocks)
+summary(model_anova5) #not significant because you ignored paired data
+
+#imagine a separate intercept for each block with the same slope
+ggplot(data_blocks, aes(x=xb1,y=yb1,color=block)) + geom_point() + geom_line(aes(group = block))
+model_anova6 <- aov(yb1 ~ xb1 + block, data = data_blocks)
+summary(model_anova6) #highly significant when blocks are in there
+
+#mixed model version
+model <- glmmTMB(formula = yb1 ~ xb1            , data = data_blocks) #ignore blocks: P is similar to aov example
+model <- glmmTMB(formula = yb1 ~ xb1 + (1|block), data = data_blocks) #add blocks. (1|block) means allow there to be a different intercept for each block
+Anova(model)
+
+
+
+```
+
+
+pseudoreplication
+```{r}
+
+#LOAD DATA
+Data <- read_excel("data_week6_PPtapspractice.xlsx")
+Data$Site <- as.factor(Data$Site)#convert Site to categorical variable instead of number
+
+#EXPLANATION
+#What you should not do: run a model before graphing and thinking
+model_anova <- aov(Adults ~ Trt, data = Data)
+summary(model_anova)
+
+#data points are not independent, we only have 6 sites
+ggplot(data = Data, aes(x = Trt, y = Adults, color = Site)) +
+  geom_point() +
+  facet_wrap(~Site)
+
+#the correct way to look at it. N = 6 paired sites
+ggplot(data = Data, aes(x = Trt, y = Adults, color = Site)) +
+  stat_summary(fun.y = mean, geom = "point") +
+  stat_summary(fun.y = mean, geom = "line", aes(group = Site))
+
+#a simple way to deal with this. summarize the data to one value per experimental unit
+Data_summary <- do.call(data.frame, 
+                        aggregate(Adults~Trt+Site, 
+                                  data = Data, 
+                                  function(x) 
+                                    c(mean = mean(x),
+                                      sd = sd(x), 
+                                      count = length(x))))
+
+model_anova <- aov(Adults.mean ~ Trt + Site, data = Data_summary) #treating site like a block like in previous example
+summary(model_anova)
+plot(model_anova, 1)
+plot(model_anova, 2)
+
+```
+
+
+dealing with psuedoreplication by using random effects
+```{r}
+
+
+#USING RANDOM EFFECTS
+#wrong way: ignoring everything
+model <- glmmTMB(formula = Adults ~ Trt            , data = Data) #P is similar to aov example. Sample size is inappropriate
+summary(model)
+plot(simulateResiduals(model))
+
+#including random effect for repeated measures
+#first, let's make an ID for each plot called "subject"
+Data$subject <- paste(Data$Site,Data$Trt)
+#now add random intercept for subjects
+model <- glmmTMB(formula = Adults ~ Trt + (1|subject), data = Data) #we are saying, look there are going to be multiple measurements per subject!
+summary(model) #not significant when pseudoreplication is removed
+plot(simulateResiduals(model))
+
+#but, we also want to consider that measurement are related by block (i.e., "Site" in this data set)
+model <- glmmTMB(formula = Adults ~ Trt + (1|subject) + (1|Site), data = Data)
+summary(model) # P is similar to the simple summarized method
+plot(simulateResiduals(model))
+
+#alternative way with "nesting" removes need for subject label
+model <- glmmTMB(formula = Adults ~ Trt + (1|Site/Trt), data = Data)
+summary(model)
+plot(simulateResiduals(model))
+
+#can we satisfy assumptions?
+model <- glmmTMB(formula = Adults ~ Trt + (1|Site/Trt), data = Data, family = "nbinom1")
+summary(model)
+plot(simulateResiduals(model))
+
+model <- glmmTMB(formula = Adults ~ Trt + (1|Site/Trt), data = Data, family = "nbinom2")
+summary(model)
+plot(simulateResiduals(model))
+
+model <- glmmTMB(formula = Adults ~ Trt + (1|Site/Trt), data = Data, family = "poisson")
+summary(model)
+plot(simulateResiduals(model))
+
+model <- glmmTMB(formula = Adults ~ Trt + (1|Site/Trt), data = Data, family = "gaussian") # = "normal"
+summary(model)
+plot(simulateResiduals(model))
+
+model <- glmmTMB(formula = log(Adults+1) ~ Trt + (1|Site/Trt), data = Data, family = "gaussian") # = "normal"
+summary(model)
+plot(simulateResiduals(model))
+
+#options:
+#1. explore zero-inflated models and find a way
+#2. ignore qqplot and use our glmm, it's good enough
+#3. just use the simple summary version with averaging to remove pseudoreplication
+
+```
+
+
+
+
+
+
