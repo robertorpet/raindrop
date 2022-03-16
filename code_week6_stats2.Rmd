@@ -15,7 +15,10 @@ https://www.flutterbys.com.au/stats/tut/tut10.4.html
 
 ```{r generate numbers}
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 61f061719e860df1292279cc750b256d4645a2eb
 #load packages
 library(readxl)
 library(ggplot2)
@@ -162,8 +165,11 @@ summary(model_anova6) #highly significant when blocks are in there
 
 #mixed model version
 model <- glmmTMB(formula = yb1 ~ xb1            , data = data_blocks) #ignore blocks: P is similar to aov example
+<<<<<<< HEAD
 Anova(model)
 
+=======
+>>>>>>> 61f061719e860df1292279cc750b256d4645a2eb
 model <- glmmTMB(formula = yb1 ~ xb1 + (1|block), data = data_blocks) #add blocks. (1|block) means allow there to be a different intercept for each block
 Anova(model)
 
