@@ -1,0 +1,158 @@
+---
+title: "W4"
+output: html_notebook
+---
+
+Generalized linear mixed models
+Theme: don't use these tools unless you need to.
+Items: (1) finish glmm for now. (2) Data sharing.
+
+REVIEW
+Reasons to use generalized linear model:
+1. binomial ("binary") data (Warton 2011)
+2. can't meet assumptions of normal linear model, so you can try other distributions
+4. output is related to the world
+5. some  fancy options like zero-inflated distributions
+6. your advisor or teacher tells you to
+7. they make some statisticians happy
+8. to feel smart, impress colleagues, employers
+
+Reasons not to use:
+1. log-transormation is just as good for most applied statistics (Ives 2015 vs. O'Hara and Kotze 2010)
+2. generalized model has higher type I error (false positive) vs. log transform with small sample sizes (Ives 2015)
+3. you can find literature for any approach
+
+Summary: you can find support (O'Hara and Kotze 2010) or dissent (Ives 2015) for glmms vs. transformation.
+
+
+NEW ITEMS
+Reasons to used mixed effects model
+1. random effects for blocks
+2. random effects to control for repeated measurements (prevent pseudoreplication)
+3. your advisor tells you to
+
+Reasons not to use:
+1. harder to understand and specify model correctly
+2. simpler alternatives: you can use a fixed effect for block. You can summarize data for repeated measurements
+
+
+
+dealing with pseudoreplication by summarizing (no random effects)
+```{r}
+#LOAD PACKAGES
+library(readxl)
+library(ggplot2)
+
+#LOAD DATA
+Data <- read_excel("data_week6_PPtapspractice.xlsx")
+Data$Site <- as.factor(Data$Site)#convert Site to categorical variable instead of number
+
+#EXPLANATION
+#What you should not do: run a model before graphing and thinking
+model_anova <- aov(Adults ~ Trt, data = Data)
+model_anova <- aov(Adults ~ Trt + Site, data = Data)
+
+summary(model_anova)
+
+#data points are not independent, we only have 6 sites
+ggplot(data = Data, aes(x = Trt, y = Adults, color = Site)) +
+  geom_point() +
+  facet_wrap(~Site)
+
+ggplot(data = Data, aes(x = Trt, y = Adults, color = Site)) +
+  geom_point()
+
+#the correct way to look at it. N = 6 paired sites
+ggplot(data = Data, aes(x = Trt, y = Adults, color = Site)) +
+  stat_summary(fun.y = mean, geom = "point") +
+  stat_summary(fun.y = mean, geom = "line", aes(group = Site))
+
+#a simple way to deal with this. summarize the data to one value per experimental unit
+#aggregate fucntion aggregate()
+Data_summary <- do.call(data.frame, 
+                        aggregate(Adults~Trt+Site, 
+                                  data = Data, 
+                                  function(x) 
+                                    c(mean = mean(x),
+                                      sd = sd(x), 
+                                      count = length(x))))
+
+ggplot(data = Data_summary, aes(x = Trt, y = Adults.mean, color = Site)) +
+  geom_point() +
+  facet_wrap(~Site)
+
+model_anova <- aov(Adults.mean ~ Trt + Site, data = Data_summary) #treating site like a block like in previous example
+summary(model_anova)
+plot(model_anova, 1)
+plot(model_anova, 2)
+
+```
+
+
+dealing with psuedoreplication by using random effects
+```{r}
+
+#LOAD PACKAGES
+library(glmmTMB)
+library(DHARMa)
+
+#USING RANDOM EFFECTS
+#wrong way: ignoring everything. Same wrong approach as above but with glmmTMB()
+model <- glmmTMB(formula = Adults ~ Trt            , data = Data) #P is similar to aov example. Sample size is inappropriate
+summary(model)
+plot(simulateResiduals(model))
+
+#including random effect for repeated measures
+#first, let's make an ID for each plot called "subject"
+Data$subject <- paste(Data$Site,Data$Trt)
+#now add random intercept for subjects
+model <- glmmTMB(formula = Adults ~ Trt + (1|subject), data = Data) #we are saying, look there are going to be multiple measurements per subject!
+summary(model) #not significant when pseudoreplication is removed
+plot(simulateResiduals(model))
+
+#but, we also want to consider that measurements are related by block (i.e., "Site" in this data set)
+model <- glmmTMB(formula = Adults ~ Trt + (1|subject) + (1|Site), data = Data)
+summary(model) # P is similar to the simple summarized method
+plot(simulateResiduals(model)) #let's ignore this for now
+
+#alternative way with "nesting" removes need for subject label
+model <- glmmTMB(formula = Adults ~ Trt + (1|Site/Trt), data = Data)
+summary(model)
+plot(simulateResiduals(model))
+
+#can we satisfy assumptions?
+model <- glmmTMB(formula = Adults ~ Trt + (1|Site/Trt), data = Data, family = "nbinom1")
+summary(model)
+plot(simulateResiduals(model))
+
+model <- glmmTMB(formula = Adults ~ Trt + (1|Site/Trt), data = Data, family = "nbinom2")
+summary(model)
+plot(simulateResiduals(model))
+
+model <- glmmTMB(formula = Adults ~ Trt + (1|Site/Trt), data = Data, family = "poisson")
+summary(model)
+plot(simulateResiduals(model))
+
+model <- glmmTMB(formula = Adults ~ Trt + (1|Site/Trt), data = Data, family = "gaussian") # = "normal"
+summary(model)
+plot(simulateResiduals(model))
+
+model <- glmmTMB(formula = log(Adults+1) ~ Trt + (1|Site/Trt), data = Data, family = "gaussian") # = "normal"
+summary(model)
+plot(simulateResiduals(model))
+
+
+#options:
+#1. ignore qqplot and use our glmm, it's good enough. Large number of observtions makes the test too sensitive.
+#     i) the one site with very low counts and many zeroes is probably the problem
+#2. just use the simple summary version with averaging to remove pseudoreplication
+#3. explore zero-inflated models and other fancy things to find a way
+
+
+#I could not find a solution, suggest option #2
+
+```
+
+
+
+
