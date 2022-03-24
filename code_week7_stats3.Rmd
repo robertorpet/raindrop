@@ -4,18 +4,18 @@ output: html_notebook
 ---
 
 Generalized linear mixed models
-Theme: don't use these tools unless you need to.
+Theme: don't use glmms unless you need to.
 Items: (1) finish glmm for now. (2) Data sharing.
 
 REVIEW
-Reasons to use generalized linear model:
+Reasons to use generalized linear mixed model:
 1. binomial ("binary") data (Warton 2011)
 2. can't meet assumptions of normal linear model, so you can try other distributions
-4. output is related to the world
-5. some  fancy options like zero-inflated distributions
-6. your advisor or teacher tells you to
-7. they make some statisticians happy
-8. to feel smart, impress colleagues, employers
+3. output is related to the world
+4. some  fancy options like zero-inflated distributions
+5. your advisor or teacher tells you to
+6. they make some statisticians happy
+7. to feel smart, impress colleagues, employers
 
 Reasons not to use:
 1. log-transormation is just as good for most applied statistics (Ives 2015 vs. O'Hara and Kotze 2010)
@@ -68,14 +68,16 @@ ggplot(data = Data, aes(x = Trt, y = Adults, color = Site)) +
   stat_summary(fun.y = mean, geom = "line", aes(group = Site))
 
 #a simple way to deal with this. summarize the data to one value per experimental unit
-#aggregate fucntion aggregate()
+#aggregate function aggregate()
 Data_summary <- do.call(data.frame, 
-                        aggregate(Adults~Trt+Site, 
+                        aggregate(Adults~Trt+Site+Date, 
                                   data = Data, 
                                   function(x) 
                                     c(mean = mean(x),
-                                      sd = sd(x), 
+                                      SEM = sd(x)/sqrt(length(x)),
                                       count = length(x))))
+
+
 
 ggplot(data = Data_summary, aes(x = Trt, y = Adults.mean, color = Site)) +
   geom_point() +
@@ -89,12 +91,13 @@ plot(model_anova, 2)
 ```
 
 
-dealing with psuedoreplication by using random effects
+dealing with pseudoreplication by using random effects
 ```{r}
 
 #LOAD PACKAGES
 library(glmmTMB)
 library(DHARMa)
+library(car)
 
 #USING RANDOM EFFECTS
 #wrong way: ignoring everything. Same wrong approach as above but with glmmTMB()
@@ -113,11 +116,13 @@ plot(simulateResiduals(model))
 #but, we also want to consider that measurements are related by block (i.e., "Site" in this data set)
 model <- glmmTMB(formula = Adults ~ Trt + (1|subject) + (1|Site), data = Data)
 summary(model) # P is similar to the simple summarized method
+Anova(model)
 plot(simulateResiduals(model)) #let's ignore this for now
 
 #alternative way with "nesting" removes need for subject label
 model <- glmmTMB(formula = Adults ~ Trt + (1|Site/Trt), data = Data)
 summary(model)
+Anova(model)
 plot(simulateResiduals(model))
 
 #can we satisfy assumptions?
